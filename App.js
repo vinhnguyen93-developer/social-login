@@ -1,12 +1,29 @@
 import React, {useState, useEffect} from 'react';
-import {StyleSheet, Text, View, TouchableOpacity} from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  NativeModules,
+} from 'react-native';
 import auth from '@react-native-firebase/auth';
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import {LoginManager, AccessToken} from 'react-native-fbsdk-next';
 
+import {
+  TWITTER_CONSUMER_KEY,
+  TWITTER_CONSUMER_SECRET,
+  WEB_CLIENT_ID,
+} from '@env';
+
+const {RNTwitterSignIn} = NativeModules;
+
+RNTwitterSignIn.init(TWITTER_CONSUMER_KEY, TWITTER_CONSUMER_SECRET).then(() =>
+  console.log('Twitter SDK initialized'),
+);
+
 GoogleSignin.configure({
-  webClientId:
-    '190082873884-fl1vsd72af62pvna3lf48nvj5afj0p8g.apps.googleusercontent.com',
+  webClientId: WEB_CLIENT_ID,
 });
 
 const App = () => {
@@ -24,12 +41,12 @@ const App = () => {
     const {idToken} = await GoogleSignin.signIn();
     const googleCredential = auth.GoogleAuthProvider.credential(idToken);
 
-    try {
-      let loginUser = auth().signInWithCredential(googleCredential);
-      setSocialLogin(true);
-    } catch (error) {
-      setSocialLogin(false);
-    }
+    auth()
+      .signInWithCredential(googleCredential)
+      .then(() => {
+        setSocialLogin(true);
+      })
+      .catch(error => console.log(error));
   };
 
   const loginWithFacebook = async () => {
@@ -57,6 +74,24 @@ const App = () => {
     // Sign-in the user with the credential
     auth()
       .signInWithCredential(facebookCredential)
+      .then(() => {
+        setSocialLogin(true);
+      })
+      .catch(error => console.log(error));
+  };
+
+  const loginWithTwitter = async () => {
+    const {authToken, authTokenSecret} = await RNTwitterSignIn.logIn();
+
+    // Create a Twitter credential with the tokens
+    const twitterCredential = auth.TwitterAuthProvider.credential(
+      authToken,
+      authTokenSecret,
+    );
+
+    // Sign-in the user with the credential
+    auth()
+      .signInWithCredential(twitterCredential)
       .then(() => {
         setSocialLogin(true);
       })
@@ -107,7 +142,9 @@ const App = () => {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.loginButton, styles.buttonTwitter]}>
+          <TouchableOpacity
+            onPress={loginWithTwitter}
+            style={[styles.loginButton, styles.buttonTwitter]}>
             <Text style={[styles.loginButtonText, styles.textTwitter]}>
               Login with Twitter
             </Text>
